@@ -51,13 +51,16 @@
             true)))
        (every? true?)))
 
-(defn word-valid-for-wrong-characters? [wrong-characters word]
-  (->> wrong-characters
-       (map-indexed (fn [idx incorrect-chars]
-                      (if (some? incorrect-chars)
-                        (not (incorrect-chars (get word idx)))
-                        true)))
-       (every? true?)))
+(defn word-valid-for-wrong-characters? [{:keys [correct-characters
+                                                wrong-characters]}
+                                        word]
+  (let [all-wrong-chars (set (apply concat wrong-characters))]
+    (->> word
+         (map-indexed
+          (fn [idx char]
+            (or (some? (get correct-characters idx))
+                (not (all-wrong-chars char)))))
+         (every? true?))))
 
 (defn word-valid-for-correct-characters? [correct-characters word]
   (->> correct-characters
@@ -69,8 +72,7 @@
 
 (defn find-word [words state]
   (let [valid-misplaced? (partial word-valid-for-misplaced-characters? state)
-        valid-wrong?     (partial word-valid-for-wrong-characters?
-                                  (:wrong-characters state))
+        valid-wrong?     (partial word-valid-for-wrong-characters? state)
         valid-correct?   (partial word-valid-for-correct-characters?
                                   (:correct-characters state))]
     (->> words
