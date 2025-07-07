@@ -118,5 +118,7 @@
      :word      word}))
 
 ;; TODO: Use char frequencies for guessing
+;; TODO: Use char frequencies for guessing i.e. the big idea
+;; TODO: Use as diverse as possible chars for guessing
 
 (-main)
