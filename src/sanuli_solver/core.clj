@@ -72,7 +72,7 @@
                         true)))
        (every? true?)))
 
-(defn find-word [words state]
+(defn filter-words-by-state [state words]
   (let [valid-misplaced? (partial word-valid-for-misplaced-characters? state)
         valid-wrong?     (partial word-valid-for-wrong-characters? state)
         valid-correct?   (partial word-valid-for-correct-characters?
@@ -80,8 +80,29 @@
     (->> words
          (filter valid-misplaced?)
          (filter valid-wrong?)
-         (filter valid-correct?)
-         first)))
+         (filter valid-correct?))))
+
+(defn probability-score [state words word]
+  (let [char-count (:character-count state)
+        freqs      (->> (range char-count)
+                        (map (fn [i]
+                               (->> words
+                                    (map #(nth % i)))))
+                        (map frequencies))]
+    (->> word
+         (map-indexed
+          (fn [idx word-char]
+            (-> (nth freqs idx)
+                (get word-char))))
+         (reduce + 0))))
+
+(defn find-word [words state]
+  (let [valid-words  (filter-words-by-state state words)
+        sorted-words (->> valid-words
+                          (map (juxt identity #(probability-score state valid-words %)))
+
+                          (sort-by second >))]
+    (ffirst sorted-words)))
 
 (defn read-words []
   (with-open [reader (io/reader "resources/nykysuomensanalista2024.txt")]
@@ -111,14 +132,12 @@
         my-state  (sanuli-state {:guesses              []
                                  :correct-characters   [nil nil nil nil nil]
                                  :misplaced-characters [nil nil nil nil nil]
-                                 :wrong-characters     [nil nil nil nil nil]
+                                 :wrong-characters     [#{} #{} #{} #{} #{}]
                                  :character-count      5})
         word      (find-word words my-state)]
     {:top-chars top-chars
      :word      word}))
 
-;; TODO: Use char frequencies for guessing
-;; TODO: Use char frequencies for guessing i.e. the big idea
 ;; TODO: Use as diverse as possible chars for guessing
 
 (-main)
