@@ -32,11 +32,10 @@
         (fn [misplaced-idx misplaced-character]
           (if (some? misplaced-character)
             (let [misplaced-char-correct-idxs (->> correct-characters
-                                                   (map-indexed (fn [correct-character-idx correct-character]
+                                                   (keep-indexed (fn [correct-character-idx correct-character]
                                                                   (when (and (some? correct-character)
                                                                              (= correct-character misplaced-character))
                                                                     correct-character-idx)))
-                                                   (filter some?)
                                                    set)
                   disallowed-idxs             (-> misplaced-char-correct-idxs
                                                   (conj misplaced-idx))
