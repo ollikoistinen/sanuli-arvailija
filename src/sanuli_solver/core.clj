@@ -25,31 +25,33 @@
 
 (defn word-valid-for-misplaced-characters? [{:keys [misplaced-characters
                                                     correct-characters
+                                                    wrong-characters
                                                     character-count]}
                                             word]
-  (->> misplaced-characters
-       (map-indexed
-        (fn [misplaced-idx misplaced-character]
-          (if (some? misplaced-character)
-            (let [misplaced-char-correct-idxs (->> correct-characters
-                                                   (keep-indexed (fn [correct-character-idx correct-character]
-                                                                  (when (and (some? correct-character)
-                                                                             (= correct-character misplaced-character))
-                                                                    correct-character-idx)))
-                                                   set)
-                  disallowed-idxs             (-> misplaced-char-correct-idxs
-                                                  (conj misplaced-idx))
-                  look-idxs                   (-> character-count
-                                                  range
-                                                  set
-                                                  (set/difference disallowed-idxs))]
-               ;; TODO: Not optimal when there are multiple same misplaced characters
-               ;; Check for count instead of existence should work.
-              (->> look-idxs
-                   (map #(nth word %))
-                   (some #(= % misplaced-character))))
-            true)))
-       (every? true?)))
+  (let [mp-char-counts         (->> misplaced-characters
+                                    (filter some?)
+                                    frequencies
+                                    set)
+        mp-char-set            (set (keys mp-char-counts))
+        mp-char-counts-in-word (->> word
+                                    frequencies
+                                    (filter #(mp-char-set (key %)))
+                                    set)]
+    (when (= mp-char-counts mp-char-counts-in-word)
+      (->> mp-char-counts
+           (map (fn [[mp-char mp-char-count]]
+                  (let [valid-idxs-for-mp-char (->> (range character-count)
+                                                    (keep
+                                                     (fn [idx]
+                                                       (when (and (not (some? (get correct-characters idx)))
+                                                                  (not ((get wrong-characters idx) mp-char))
+                                                                  (not= (get misplaced-characters idx) mp-char))
+                                                         idx))))]
+                    (->> valid-idxs-for-mp-char
+                         (filter #(= (nth word %) mp-char))
+                         count
+                         (>= mp-char-count)))))
+           (every? true?)))))
 
 (defn word-valid-for-wrong-characters? [{:keys [correct-characters
                                                 wrong-characters]}
