@@ -28,27 +28,28 @@
                                                     character-count]}
                                             word]
   (->> misplaced-characters
-       (map-indexed (fn [misplaced-idx misplaced-character]
-                      (if (some? misplaced-character)
-                        (let [misplaced-char-correct-idxs (->> correct-characters
-                                                               (map-indexed (fn [correct-character-idx correct-character]
-                                                                              (when (and (some? correct-character)
-                                                                                         (= correct-character misplaced-character))
-                                                                                correct-character-idx)))
-                                                               (filter some?)
-                                                               set)
-                              disallowed-idxs             (-> misplaced-char-correct-idxs
-                                                              (conj misplaced-idx))
-                              look-idxs                   (-> character-count
-                                                              range
-                                                              set
-                                                              (set/difference disallowed-idxs))]
-                          ;; TODO: Not optimal when there are multiple same misplaced characters
-                          ;; Check for count instead of existence should work.
-                          (->> look-idxs
-                               (map #(nth word %))
-                               (some #(= % misplaced-character))))
-                        true)))
+       (map-indexed
+        (fn [misplaced-idx misplaced-character]
+          (if (some? misplaced-character)
+            (let [misplaced-char-correct-idxs (->> correct-characters
+                                                   (map-indexed (fn [correct-character-idx correct-character]
+                                                                  (when (and (some? correct-character)
+                                                                             (= correct-character misplaced-character))
+                                                                    correct-character-idx)))
+                                                   (filter some?)
+                                                   set)
+                  disallowed-idxs             (-> misplaced-char-correct-idxs
+                                                  (conj misplaced-idx))
+                  look-idxs                   (-> character-count
+                                                  range
+                                                  set
+                                                  (set/difference disallowed-idxs))]
+               ;; TODO: Not optimal when there are multiple same misplaced characters
+               ;; Check for count instead of existence should work.
+              (->> look-idxs
+                   (map #(nth word %))
+                   (some #(= % misplaced-character))))
+            true)))
        (every? true?)))
 
 (defn word-valid-for-wrong-characters? [wrong-characters word]
