@@ -23,13 +23,14 @@
   (->> data
        valid-sanuli-state!))
 
-(defn word-valid-for-misplaced-characters? [state word]
-  (->> state
-       :misplaced-characters
+(defn word-valid-for-misplaced-characters? [{:keys [misplaced-characters
+                                                    correct-characters
+                                                    character-count]}
+                                            word]
+  (->> misplaced-characters
        (map-indexed (fn [misplaced-idx misplaced-character]
                       (if (some? misplaced-character)
-                        (let [misplaced-char-correct-idxs (->> state
-                                                               :correct-characters
+                        (let [misplaced-char-correct-idxs (->> correct-characters
                                                                (map-indexed (fn [correct-character-idx correct-character]
                                                                               (when (and (some? correct-character)
                                                                                          (= correct-character misplaced-character))
@@ -38,8 +39,7 @@
                                                                set)
                               disallowed-idxs             (-> misplaced-char-correct-idxs
                                                               (conj misplaced-idx))
-                              look-idxs                   (-> state
-                                                              :character-count
+                              look-idxs                   (-> character-count
                                                               range
                                                               set
                                                               (set/difference disallowed-idxs))]
@@ -51,18 +51,16 @@
                         true)))
        (every? true?)))
 
-(defn word-valid-for-wrong-characters? [state word]
-  (->> state
-       :wrong-characters
+(defn word-valid-for-wrong-characters? [wrong-characters word]
+  (->> wrong-characters
        (map-indexed (fn [idx incorrect-chars]
                       (if (some? incorrect-chars)
                         (not (incorrect-chars (get word idx)))
                         true)))
        (every? true?)))
 
-(defn word-valid-for-correct-characters? [state word]
-  (->> state
-       :correct-characters
+(defn word-valid-for-correct-characters? [correct-characters word]
+  (->> correct-characters
        (map-indexed (fn [idx correct-char]
                       (if (some? correct-char)
                         (= correct-char (nth word idx))
@@ -71,8 +69,10 @@
 
 (defn find-word [words state]
   (let [valid-misplaced? (partial word-valid-for-misplaced-characters? state)
-        valid-wrong?     (partial word-valid-for-wrong-characters? state)
-        valid-correct?   (partial word-valid-for-correct-characters? state)]
+        valid-wrong?     (partial word-valid-for-wrong-characters?
+                                  (:wrong-characters state))
+        valid-correct?   (partial word-valid-for-correct-characters?
+                                  (:correct-characters state))]
     (->> words
          (filter valid-misplaced?)
          (filter valid-wrong?)
