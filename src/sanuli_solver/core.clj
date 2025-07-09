@@ -4,12 +4,8 @@
             [clojure.set :as set]
             [schema.core :as s]))
 
-
-;; TODO: Represent the state after a guess?
-;; Guess instead of guesses here and add SanuliSolverState that contains SanuliStates?
 (s/defschema SanuliState
-  {:guesses              [s/Str]
-   :correct-characters   [(s/pred #(s/maybe (char? %)))]
+  {:correct-characters   [(s/pred #(s/maybe (char? %)))]
    :misplaced-characters [(s/pred #(s/maybe (char? %)))]
    :wrong-characters     [(s/pred #(s/maybe #{char? %}))]
    :character-count      s/Int})
@@ -82,29 +78,51 @@
          (filter valid-wrong?)
          (filter valid-correct?))))
 
-(defn probability-score [state words word]
-  (let [char-count (:character-count state)
-        freqs      (->> (range char-count)
-                        (map (fn [i]
-                               (->> words
-                                    (map #(nth % i)))))
-                        (map frequencies))]
-    (->> word
-         (map-indexed
-          (fn [idx word-char]
-            (-> (nth freqs idx)
-                (get word-char))))
-         (reduce + 0))))
+(defn word-score [state diversify? words word]
+  (let [char-count       (:character-count state)
+        word-char-freqs  (frequencies word)
+        words-char-freqs (->> (range char-count)
+                              (map (fn [i]
+                                     (->> words
+                                          (map #(nth % i)))))
+                              (map frequencies))
+        char-scores      (->> word
+                              (map-indexed
+                               (fn [idx word-char]
+                                 (-> words-char-freqs
+                                     (nth idx)
+                                     (get word-char)))))]
+    (if diversify?
+      (->> word
+           (map-indexed (fn [idx word-char]
+                          (let [char-count-in-word (get word-char-freqs word-char)]
+                            (-> (nth char-scores idx)
+                                (/ char-count-in-word)))))
+           (reduce + 0))
+      (->> char-scores
+           (reduce + 0)))))
 
-(defn find-word [words state]
+(defn find-word [words state & {:keys [diversify?
+                                       debug?]
+                                :as   opts}]
   (let [valid-words  (filter-words-by-state state words)
         sorted-words (->> valid-words
-                          (map (juxt identity #(probability-score state valid-words %)))
+                          (map (juxt identity
+                                     #(word-score state
+                                                  diversify?
+                                                  valid-words
+                                                  %)))
 
                           (sort-by second >))]
+    (when debug?
+      (clojure.pprint/pprint {:state             state
+                              :words-count       (count words)
+                              :valid-words-count (count valid-words)
+                              :diversify?        diversify?
+                              :sorted-top-10     (take 10 sorted-words)}))
     (ffirst sorted-words)))
 
-(defn read-words []
+(defn read-words [{:keys [character-count]}]
   (with-open [reader (io/reader "resources/nykysuomensanalista2024.txt")]
     (let [csv-file-mem (memoize
                         #(doall
@@ -114,30 +132,17 @@
                           (->> (csv-file-mem)
                                (drop 1)
                                (map first)
-                               (filter #(= (count %) 5)))))
+                               (filter #(= (count %) character-count)))))
           words        (words-mem)]
       words)))
 
 (defn -main []
-  (let [words     (read-words)
-        freqs     (->> (range 5)
-                       (map (fn [i]
-                              (->> words
-                                   (map #(nth % i)))))
-                       (map frequencies))
-        top-chars (->> freqs
-                       (map #(into [] %))
-                       (map #(sort-by second > %))
-                       (map ffirst))
-        my-state  (sanuli-state {:guesses              []
-                                 :correct-characters   [nil nil nil nil nil]
-                                 :misplaced-characters [nil nil nil nil nil]
-                                 :wrong-characters     [#{} #{} #{} #{} #{}]
-                                 :character-count      5})
-        word      (find-word words my-state)]
-    {:top-chars top-chars
-     :word      word}))
+  (let [my-state (sanuli-state {:correct-characters   [nil nil nil nil nil]
+                                :misplaced-characters [nil nil nil nil nil]
+                                :wrong-characters     [#{} #{} #{} #{} #{}]
+                                :character-count      5})
+        words    (read-words my-state)]
 
-;; TODO: Use as diverse as possible chars for guessing
+    (find-word words my-state :debug? true :diversify? false)))
 
 (-main)
