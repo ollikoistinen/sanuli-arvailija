@@ -61,7 +61,7 @@
                 (not (all-wrong-chars char)))))
          (every? true?))))
 
-(defn word-valid-for-correct-characters? [correct-characters word]
+(defn word-valid-for-correct-characters? [{:keys [correct-characters]} word]
   (->> correct-characters
        (map-indexed (fn [idx correct-char]
                       (if (some? correct-char)
@@ -76,8 +76,7 @@
 (defn filter-words-by-state [state words]
   (let [valid-misplaced? (partial word-valid-for-misplaced-characters? state)
         valid-wrong?     (partial word-valid-for-wrong-characters? state)
-        valid-correct?   (partial word-valid-for-correct-characters?
-                                  (:correct-characters state))
+        valid-correct?   (partial word-valid-for-correct-characters? state)
         valid-accepted?  (partial word-valid-for-accepted-characters? state)]
     (->> words
          (filter valid-accepted?)
