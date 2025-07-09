@@ -1,13 +1,14 @@
 (ns sanuli-solver.core
   (:require [clojure.java.io :as io]
             [clojure.data.csv :as csv]
-            [clojure.set :as set]
+            [clojure.string :as str]
             [schema.core :as s]))
 
 (s/defschema SanuliState
   {:correct-characters   [(s/pred #(s/maybe (char? %)))]
    :misplaced-characters [(s/pred #(s/maybe (char? %)))]
    :wrong-characters     [(s/pred #(s/maybe #{char? %}))]
+   :accepted-characters  (s/pred #(s/maybe #{char? %}))
    :character-count      s/Int})
 
 (defn valid-sanuli-state!
@@ -68,12 +69,18 @@
                         true)))
        (every? true?)))
 
+(defn word-valid-for-accepted-characters? [{:keys [accepted-characters]} word]
+  (->> word
+       (every? accepted-characters)))
+
 (defn filter-words-by-state [state words]
   (let [valid-misplaced? (partial word-valid-for-misplaced-characters? state)
         valid-wrong?     (partial word-valid-for-wrong-characters? state)
         valid-correct?   (partial word-valid-for-correct-characters?
-                                  (:correct-characters state))]
+                                  (:correct-characters state))
+        valid-accepted?  (partial word-valid-for-accepted-characters? state)]
     (->> words
+         (filter valid-accepted?)
          (filter valid-misplaced?)
          (filter valid-wrong?)
          (filter valid-correct?))))
@@ -115,7 +122,7 @@
 
                           (sort-by second >))]
     (when debug?
-      (clojure.pprint/pprint {:state             state
+      (clojure.pprint/pprint {:state             (dissoc state :accepted-characters)
                               :words-count       (count words)
                               :valid-words-count (count valid-words)
                               :diversify?        diversify?
@@ -140,6 +147,15 @@
   (let [my-state (sanuli-state {:correct-characters   [nil nil nil nil nil]
                                 :misplaced-characters [nil nil nil nil nil]
                                 :wrong-characters     [#{} #{} #{} #{} #{}]
+                                :accepted-characters  #{\a \b \c \d \e \f \g
+                                                        \h \i \j \k \l \m \n
+                                                        \o \p \q \r \s \t \u
+                                                        \v \w \x \y \z \ä \ö
+                                                        \å \A \B \C \D \E \F
+                                                        \G \H \I \J \K \L \M
+                                                        \N \O \P \Q \R \S \T
+                                                        \U \V \W \X \Y \Z \Ä
+                                                        \Ö \Å}
                                 :character-count      5})
         words    (read-words my-state)]
 
