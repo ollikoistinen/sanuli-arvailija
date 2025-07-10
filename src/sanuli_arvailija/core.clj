@@ -1,7 +1,6 @@
-(ns sanuli-solver.core
+(ns sanuli-arvailija.core
   (:require [clojure.java.io :as io]
             [clojure.data.csv :as csv]
-            [clojure.string :as str]
             [schema.core :as s]))
 
 (s/defschema SanuliState
@@ -157,7 +156,6 @@
                                                         \Ö \Å}
                                 :character-count      5})
         words    (read-words my-state)]
-
-    (find-word words my-state :debug? true :diversify? false)))
+    (find-word words my-state :debug? true :diversify? true)))
 
 (-main)
