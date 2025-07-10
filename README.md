@@ -1,10 +1,10 @@
 # sanuli-arvailija
 
-A Clojure library designed to ... well, that part is up to you.
+sanuli-arvailija tries to generate good guesses for [sanuli](https://sanuli.fi/).
 
 ## Usage
 
-FIXME
+There is no UI, just edit my-state in -main fn.
 
 ## License
 
