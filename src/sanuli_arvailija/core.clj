@@ -83,10 +83,11 @@
          (filter valid-wrong?)
          (filter valid-correct?))))
 
-(defn word-score [state diversify? words word]
+(defn column-score [state diversify? words word]
   (let [char-count       (:character-count state)
         word-char-freqs  (frequencies word)
-        words-char-freqs (->> (range char-count)
+        words-char-freqs (->> char-count
+                              range
                               (map (fn [i]
                                      (->> words
                                           (map #(nth % i)))))
@@ -107,7 +108,28 @@
       (->> char-scores
            (reduce + 0)))))
 
+(defn full-word-score [diversify? words word]
+  (let [word-char-freqs     (frequencies word)
+        words-char-freqs    (->> words
+                                 (mapcat frequencies)
+                                 (reduce (fn [m [k v]]
+                                           (update m k #(+ v (or % 0))))
+                                         {}))
+        word-freqs-in-words (->> word
+                                 (map (fn [word-char]
+                                        (/ (words-char-freqs word-char 0)
+                                           (if diversify?
+                                             (word-char-freqs word-char)
+                                             1)))))]
+    (reduce + word-freqs-in-words)))
+
+(defn word-score [state diversify? full-word-score? words word]
+  (+ (column-score state diversify? words word)
+     (when full-word-score?
+       (full-word-score diversify? words word))))
+
 (defn find-word [words state & {:keys [diversify?
+                                       full-word-score?
                                        debug?]
                                 :as   opts}]
   (let [valid-words  (filter-words-by-state state words)
@@ -115,6 +137,7 @@
                           (map (juxt identity
                                      #(word-score state
                                                   diversify?
+                                                  full-word-score?
                                                   valid-words
                                                   %)))
 
@@ -156,6 +179,6 @@
                                                         \Ö \Å}
                                 :character-count      5})
         words    (read-words my-state)]
-    (find-word words my-state :debug? true :diversify? true)))
+    (find-word words my-state :debug? true :diversify? true :full-word-score? true)))
 
 (-main)
