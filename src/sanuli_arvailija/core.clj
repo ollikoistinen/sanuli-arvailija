@@ -29,7 +29,16 @@
                                     frequencies
                                     set)
         mp-char-set            (set (keys mp-char-counts))
+        mp-char-idxs           (->> misplaced-characters
+                                    (map-indexed (fn [idx char]
+                                                   (when (some? char)
+                                                     idx)))
+                                    (filter some?)
+                                    set)
         mp-char-counts-in-word (->> word
+                                    (keep-indexed (fn [idx char]
+                                                    (when-not (mp-char-idxs idx)
+                                                      char)))
                                     frequencies
                                     (filter #(mp-char-set (key %)))
                                     set)]
