@@ -3,6 +3,9 @@
             [clojure.data.csv :as csv]
             [schema.core :as s]))
 
+;; TODO: Previously misplaced character that has found it's place later is disregarded in later checks.
+;; Answer "tango" produces a case where "tahto" is suggested after two rounds. (kasti -> tarmo ->(["tango" 23] ["tappo" 22N] ["tahto" 20N]) 
+
 (s/defschema SanuliState
   {:correct-characters   [(s/pred #(s/maybe (char? %)))]
    :misplaced-characters [(s/pred #(s/maybe (char? %)))]
